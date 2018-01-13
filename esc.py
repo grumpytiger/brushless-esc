@@ -19,21 +19,18 @@ min_value = 700  #change this if your ESC's min value is different or leave it b
 #print ("Type the exact word for the function you want")
 #print ("calibrate OR manual OR control OR arm OR stop")
 
-def manual_drive(ESC): #You will use this function to program your ESC if required
-    print ("You have selected manual option so give a value between 0 and you max value")
+def manual_drive(ESC,arm_speed): #You will use this function to program your ESC if required
+
     while True:
-        inp = input()
-        if inp == "stop":
-            stop(ESC)
-            break
-        elif inp == "control":
-            control(ESC)
-            break
-        elif inp == "arm":
-            arm(ESC)
-            break	
-        else:
-            pi.set_servo_pulsewidth(ESC,inp)
+    #    if inp == "stop":
+    #        stop(ESC)
+    #        break
+       # print ("motor spins")
+        pi.set_servo_pulsewidth(ESC,arm_speed)
+    #    time.sleep(0.5)
+        #pi.set_watchdog(ESC,3000)
+       # print ("input new value and press enter")
+        #inp=input()
                 
 def calibrate(ESC):   #This is the auto calibration procedure of a normal ESC
     pi.set_servo_pulsewidth(ESC, 0)
@@ -55,7 +52,7 @@ def calibrate(ESC):   #This is the auto calibration procedure of a normal ESC
             pi.set_servo_pulsewidth(ESC, min_value)
             time.sleep(1)
             print ("Motor armed")
-            control(ESC) # You can change this to any other function you want
+            #control(ESC) # You can change this to any other function you want
             
 def control(ESC): 
     print ("I'm Starting the motor, I hope its calibrated and armed, if not restart by giving 'x'")
@@ -90,7 +87,7 @@ def control(ESC):
         else:
             print ("WHAT DID I SAID!! Press a,q,d or e")
             
-def arm(ESC): #This is the arming procedure of an ESC 
+def arm(ESC,arm_speed): #This is the arming procedure of an ESC 
     print ("Connect the battery and press Enter")
     inp = input()    
     if inp == '':
@@ -99,35 +96,42 @@ def arm(ESC): #This is the arming procedure of an ESC
         pi.set_servo_pulsewidth(ESC, max_value)
         time.sleep(1)
         pi.set_servo_pulsewidth(ESC, min_value)
-        time.sleep(1)
-        control(ESC) 
+        time.sleep(2)
+        manual_drive(ESC,arm_speed) 
         
 def stop(ESC): #This will stop every action your Pi is performing for ESC ofcourse.
     pi.set_servo_pulsewidth(ESC, 0)
     pi.stop()
 
 def Main():    
-    #This is the start of the program, hence we call it Main.
     parser = argparse.ArgumentParser()
+    group= parser.add_mutually_exclusive_group()
     parser.add_argument("pin", help="Input the GPIO Pin connected to the ESC.", type=int)
-    parser.add_argument("-c", "--calibration", help = "start ESC calibration.", action = "store_true")
+    group.add_argument("-c", "--calibration", action="store_true",\
+                       help="calibrate ESC for first time useage.")
+    group.add_argument("-m", "--move", action="store_true", \
+                       help="spin the motor, motor must be arm and calibrated.")
+    group.add_argument("-s", "--stop_motor", action="store_true", help="stop the motor.")
+    group.add_argument("-a", "--arm_motor", action="store_true", help="arm the motor.")
+    group.add_argument("-man", "--manual_motor", action="store_true", \
+                       help="manually input value to spin the motor.")
+    parser.add_argument("speed",nargs="?",help="manual input motor speed",type=int)
     args = parser.parse_args()
-    action = calibrate(args.pin)
-    
-    #inp = input()
-    #if inp == "manual":
-    #    manual_drive()
-    #elif inp == "calibrate":
-    #    calibrate()
-    #elif inp == "arm":
-    #    arm()
-    #elif inp == "control":
-    #    control()
-    #elif inp == "stop":
-    #    stop()
-    #else :
-    #    print ("Thank You for not following the things I'm saying... now you gotta restart the program STUPID!!")
-    #this code controls the speed of a brushless motor via esc
+
+    if args.calibration:
+        calibrate(args.pin)
+    elif args.move:
+        control(args.pin)
+    elif args.stop_motor:
+        stop(args.pin)
+    elif args.arm_motor:
+        arm(args.pin,args.speed)
+    elif args.manual_motor:
+        if args.speed is None:
+            print("missing speed value, range (700-2000)")
+            stop(args.pin)
+        else:
+            arm(args.pin, args.speed)
 
 if __name__== '__main__':
     Main()
